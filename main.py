@@ -72,7 +72,7 @@ class Model:
 
         with tf.name_scope('layer_1'):
             self.h1_dim = 1500
-            self.alpha1 = 1e-3
+            self.alpha1 = 1e-1
             self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0, 0.1), name='w1')
             self.w1_trans = tf.transpose(self.w1, [1, 0])
             self.b1 = tf.Variable(tf.constant(0.1), [self.h1_dim], name='b1')
