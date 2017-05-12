@@ -7,8 +7,9 @@ from datetime import datetime
 import os
 
 # Global constants describing the CIFAR-10 data set.
+N_CHANNELS = 1
 IMAGE_SIZE = 32
-img_dim = IMAGE_SIZE * IMAGE_SIZE * 3
+img_dim = IMAGE_SIZE * IMAGE_SIZE * N_CHANNELS
 NUM_CLASSES = 10
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 50000
 
@@ -38,17 +39,13 @@ class Model:
         with tf.name_scope('layer_1'):
             self.h1_dim = 100
             self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0.0, 0.1), name='w1')
-            self.w2 = tf.Variable(tf.truncated_normal([self.h1_dim, img_dim], 0.0, 0.1), name='w2')
-            self.w1_viz = tf.reshape(self.w1, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='w1_viz')
-            self.w1_viz_red, self.w1_viz_green, self.w1_viz_blue = tf.unstack(self.w1_viz, axis=3)
-            self.w1_viz_red = tf.expand_dims(self.w1_viz_red, axis=3)
-            self.w1_viz_green = tf.expand_dims(self.w1_viz_green, axis=3)
-            self.w1_viz_blue = tf.expand_dims(self.w1_viz_blue, axis=3)
+            self.w1_trans = tf.transpose(self.w1, [1, 0])
+            self.w1_viz = tf.reshape(self.w1, [-1, IMAGE_SIZE, IMAGE_SIZE, N_CHANNELS], name='w1_viz')
             self.b1 = tf.Variable(tf.constant(0.05, shape=[self.h1_dim]), name='b1')
             self.a1 = tf.Variable(tf.constant(0.05, shape=[img_dim]), name='a1')
             self.h1 = tf.nn.sigmoid(tf.matmul(self.flat_images, self.w1) + self.b1, name='h1')
-            self.y1 = tf.nn.sigmoid(tf.matmul(self.h1, self.w2) + self.a1, name='y1')
-            self.y1_images = tf.reshape(self.y1, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='y1_images')
+            self.y1 = tf.nn.sigmoid(tf.matmul(self.h1, self.w1_trans) + self.a1, name='y1')
+            self.y1_images = tf.reshape(self.y1, [-1, IMAGE_SIZE, IMAGE_SIZE, N_CHANNELS], name='y1_images')
             self.vars1 = [self.w1, self.b1, self.a1]
 
             self.reconstruction_loss1 = tf.nn.l2_loss(self.y1 - self.flat_images, name='loss1')
@@ -65,9 +62,7 @@ class Model:
             tf.summary.histogram('h1', self.h1)
             tf.summary.histogram('y1', self.y1)
             tf.summary.image('y1_images', self.y1_images, max_outputs=10)
-            tf.summary.image('w1_viz_red', self.w1_viz_red, max_outputs=10)
-            tf.summary.image('w1_viz_green', self.w1_viz_green, max_outputs=10)
-            tf.summary.image('w1_viz_blue', self.w1_viz_blue, max_outputs=10)
+            tf.summary.image('w1_viz', self.w1_viz, max_outputs=10)
 
         tf.summary.image('images', images, max_outputs=10)
         tf.summary.histogram('images', self.flat_images)
@@ -86,14 +81,14 @@ def main():
         record_raw = tf.decode_raw(record_str, tf.uint8, name='decode_raw')
 
         label = tf.cast(tf.slice(record_raw, [0], [1]), tf.int32)
-        image = tf.reshape(tf.slice(record_raw, [1], [img_dim]), [3, 32, 32])
+        image = tf.reshape(tf.slice(record_raw, [1], [img_dim]), [N_CHANNELS, 32, 32])
         float_image = tf.cast(tf.transpose(image, [1, 2, 0]), tf.float32)
         image = tf.divide(float_image, 255.0, name='norm_images')
 
     with tf.name_scope('preprocess'):
-        reshaped_image = tf.cast(image, tf.float32)
-        # float_image = tf.image.per_image_standardization(reshaped_image)
-        processed_image = reshaped_image
+        # float_image = tf.image.per_image_standardization(float_image)
+        gray_image = tf.reduce_sum(tf.multiply(image, [0.2126, 0.7512, 0.0722]), axis=2, name='grayscale')
+        processed_image = gray_image
 
     min_fraction_of_examples_in_queue = 0.4
     min_queue_examples = int(NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN * min_fraction_of_examples_in_queue)
