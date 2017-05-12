@@ -42,8 +42,8 @@ class Model:
             self.w1_trans = tf.transpose(self.w1, [1, 0])
             self.b1 = tf.Variable(tf.constant(0.05, shape=[self.h1_dim]), name='b1')
             self.a1 = tf.Variable(tf.constant(0.05, shape=[img_dim]), name='a1')
-            self.h1 = tf.nn.tanh(tf.matmul(self.flat_norm_images, self.w1) + self.b1, name='h1')
-            self.y1 = tf.nn.tanh(tf.matmul(self.h1, self.w1_trans) + self.a1, name='y1')
+            self.h1 = tf.nn.softplus(tf.matmul(self.flat_norm_images, self.w1) + self.b1, name='h1')
+            self.y1 = tf.nn.softplus(tf.matmul(self.h1, self.w1_trans) + self.a1, name='y1')
             self.y1_images = tf.reshape(self.y1, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='y1_images')
             self.vars1 = [self.w1, self.b1, self.a1]
 
@@ -89,7 +89,7 @@ def main():
 
     with tf.name_scope('preprocess'):
         reshaped_image = tf.cast(image, tf.float32)
-        float_image = tf.image.per_image_standardization(reshaped_image)
+        # float_image = tf.image.per_image_standardization(reshaped_image)
         processed_image = reshaped_image
 
     min_fraction_of_examples_in_queue = 0.4
