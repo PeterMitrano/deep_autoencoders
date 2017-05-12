@@ -55,6 +55,7 @@ class Model:
             self.losses.append(self.loss1)
             self.trainers.append(self.train1)
 
+            tf.summary.scalar('reconstruction_loss1', self.reconstruction_loss1)
             tf.summary.scalar('loss1', self.loss1)
             tf.summary.histogram('w1', self.w1)
             tf.summary.histogram('b1', self.b1)
