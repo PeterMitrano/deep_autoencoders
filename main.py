@@ -32,14 +32,13 @@ class Model:
     def __init__(self, images, global_step, batch_size):
         self.trainers = []
         self.losses = []
-        self.sparcity = 0.05
 
-        self.flat_norm_images = tf.reshape(images, [-1, img_dim], name='flatten')
+        self.flat_images = tf.reshape(images, [-1, img_dim], name='flatten')
 
         with tf.name_scope('layer_1'):
             self.h1_dim = 100
             self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0.0, 0.1), name='w1')
-            self.w1_trans = tf.transpose(self.w1, [1, 0])
+            self.w2 = tf.Variable(tf.truncated_normal([self.h1_dim, img_dim], 0.0, 0.1), name='w2')
             self.w1_viz = tf.reshape(self.w1, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='w1_viz')
             self.w1_viz_red, self.w1_viz_green, self.w1_viz_blue = tf.unstack(self.w1_viz, axis=3)
             self.w1_viz_red = tf.expand_dims(self.w1_viz_red, axis=3)
@@ -47,23 +46,19 @@ class Model:
             self.w1_viz_blue = tf.expand_dims(self.w1_viz_blue, axis=3)
             self.b1 = tf.Variable(tf.constant(0.05, shape=[self.h1_dim]), name='b1')
             self.a1 = tf.Variable(tf.constant(0.05, shape=[img_dim]), name='a1')
-            self.h1 = tf.nn.sigmoid(tf.matmul(self.flat_norm_images, self.w1) + self.b1, name='h1')
-            self.y1 = tf.nn.sigmoid(tf.matmul(self.h1, self.w1_trans) + self.a1, name='y1')
+            self.h1 = tf.nn.sigmoid(tf.matmul(self.flat_images, self.w1) + self.b1, name='h1')
+            self.y1 = tf.nn.sigmoid(tf.matmul(self.h1, self.w2) + self.a1, name='y1')
             self.y1_images = tf.reshape(self.y1, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='y1_images')
             self.vars1 = [self.w1, self.b1, self.a1]
 
-            self.reconstruction_loss1 = tf.nn.l2_loss(self.y1 - self.flat_norm_images, name='loss1')
-            self.p1 = tf.reduce_mean(self.h1)
-            self.kl_loss1 = tf.reduce_sum(self.sparcity * tf.log(self.sparcity / self.p1) + (1 - self.sparcity) * tf.log((1 - self.sparcity) / (1 - self.p1)))
-            alpha = 0.0
-            self.loss1 = tf.add(self.reconstruction_loss1, alpha * self.kl_loss1, name='total_loss1')
+            self.reconstruction_loss1 = tf.nn.l2_loss(self.y1 - self.flat_images, name='loss1')
+            self.loss1 = self.reconstruction_loss1
             self.train1 = tf.train.AdamOptimizer(0.002).minimize(self.loss1, global_step, self.vars1, name='train1')
             self.losses.append(self.loss1)
             self.trainers.append(self.train1)
 
             tf.summary.scalar('reconstruction_loss1', self.reconstruction_loss1)
             tf.summary.scalar('loss1', self.loss1)
-            tf.summary.scalar('p1', self.p1)
             tf.summary.histogram('w1', self.w1)
             tf.summary.histogram('b1', self.b1)
             tf.summary.histogram('a1', self.a1)
@@ -75,7 +70,7 @@ class Model:
             tf.summary.image('w1_viz_blue', self.w1_viz_blue, max_outputs=10)
 
         tf.summary.image('images', images, max_outputs=10)
-        tf.summary.histogram('images', self.flat_norm_images)
+        tf.summary.histogram('images', self.flat_images)
 
 
 def main():
