@@ -1,6 +1,5 @@
 #!/usr/bin/python3.5
 
-import numpy as np
 import tensorflow as tf
 import sys
 from subprocess import call
@@ -12,26 +11,6 @@ IMAGE_SIZE = 32
 img_dim = IMAGE_SIZE * IMAGE_SIZE * 3
 NUM_CLASSES = 10
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 50000
-
-
-def read_cifar10(filename_queue):
-    with tf.name_scope("read"):
-        class CifarRecord(object):
-            def __init__(self):
-                self.image = None
-                self.label = None
-
-        result = CifarRecord()
-
-        reader = tf.FixedLengthRecordReader(record_bytes=img_dim + 1, name='input_reader')
-        result.key, record_str = reader.read(filename_queue, name='read_op')
-        record_raw = tf.decode_raw(record_str, tf.uint8, name='decode_raw')
-
-        result.label = tf.cast(tf.slice(record_raw, [0], [1]), tf.int32)
-        image = tf.reshape(tf.slice(record_raw, [1], [img_dim]), [3, 32, 32])
-        result.image = tf.cast(tf.transpose(image, [1, 2, 0]), tf.float32)
-
-        return result
 
 
 def generate_image_and_label_batch(image, label, min_queue_examples, batch_size):
@@ -49,30 +28,11 @@ def generate_image_and_label_batch(image, label, min_queue_examples, batch_size)
         return images, tf.reshape(label_batch, [batch_size])
 
 
-def read_inputs(batch_size):
-    data_dir = 'cifar'
-    train_filenames = [os.path.join(data_dir, 'data_batch_%i.bin' % i) for i in range(1, 6)]
-
-    filename_queue = tf.train.string_input_producer(train_filenames)
-    read_input = read_cifar10(filename_queue)
-
-    with tf.name_scope('preprocess'):
-        reshaped_image = tf.cast(read_input.image, tf.float32)
-        float_image = tf.image.per_image_standardization(reshaped_image)
-
-    min_fraction_of_examples_in_queue = 0.4
-    min_queue_examples = int(NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN * min_fraction_of_examples_in_queue)
-
-    return generate_image_and_label_batch(float_image, read_input.label, min_queue_examples, batch_size)
-
-
 class Model:
     def __init__(self, images, global_step, batch_size):
         self.trainers = []
         self.losses = []
 
-        self.max = tf.reduce_max(images)
-        images = images / self.max
         self.flat_norm_images = tf.reshape(images, [-1, img_dim], name='flatten')
 
         with tf.name_scope('layer_1'):
@@ -99,38 +59,36 @@ class Model:
             tf.summary.histogram('y1', self.y1)
             tf.summary.image('y1_images', self.y1_images, max_outputs=10)
 
-        # with tf.name_scope('layer_2'):
-        #     self.h2_dim = 750
-        #     self.w2 = tf.Variable(tf.truncated_normal([self.h1_dim, self.h2_dim], 0.0, 0.1), name='w2')
-        #     self.w2_trans = tf.transpose(self.w2, [1, 0])
-        #     self.b2 = tf.Variable(tf.constant(0.05), [self.h2_dim], name='b2')
-        #     self.a2 = tf.Variable(tf.constant(0.05), [self.h2_dim], name='a2')
-        #     self.h2 = tf.nn.sigmoid(tf.matmul(self.h1, self.w2) + self.b2, name='h2')
-        #     self.h2_ = tf.nn.sigmoid(tf.matmul(self.h2, self.w2_trans) + self.a2, name='h2_')
-        #     self.y2 = tf.nn.sigmoid(tf.matmul(self.h2_, self.w1_trans) + self.a1, name='y2')
-        #     self.y2_images = tf.reshape(self.y2, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='y2_images')
-        #
-        #     self.vars2 = [self.w2, self.b2, self.a2]
-        #
-        #     self.loss2 = tf.nn.l2_loss(self.y2 - flat_norm_images, name='loss2')
-        #     self.train2 = tf.train.AdamOptimizer(0.001).minimize(self.loss2, global_step, self.vars2, name='train2')
-        #     self.losses.append(self.loss2)
-        #     self.trainers.append(self.train2)
-        #
-        #     tf.summary.scalar('loss2', self.loss2)
-        #     tf.summary.histogram('w2', self.w2)
-        #     tf.summary.histogram('b2', self.b2)
-        #     tf.summary.histogram('a2', self.a2)
-        #     tf.summary.histogram('y2', self.y2)
-        #     tf.summary.image('y2_images', self.y2_images)
-
         tf.summary.image('images', images, max_outputs=10)
         tf.summary.histogram('images', self.flat_norm_images)
 
 
 def main():
     batch_size = 128
-    images, labels = read_inputs(batch_size)
+    data_dir = 'cifar'
+    train_filenames = [os.path.join(data_dir, 'data_batch_%i.bin' % i) for i in range(1, 6)]
+
+    filename_queue = tf.train.string_input_producer(train_filenames)
+
+    with tf.name_scope("read"):
+        reader = tf.FixedLengthRecordReader(record_bytes=img_dim + 1, name='input_reader')
+        _, record_str = reader.read(filename_queue, name='read_op')
+        record_raw = tf.decode_raw(record_str, tf.uint8, name='decode_raw')
+
+        label = tf.cast(tf.slice(record_raw, [0], [1]), tf.int32)
+        image = tf.reshape(tf.slice(record_raw, [1], [img_dim]), [3, 32, 32])
+        float_image = tf.cast(tf.transpose(image, [1, 2, 0]), tf.float32)
+        image = tf.divide(float_image, 255.0, name='norm_images')
+
+    with tf.name_scope('preprocess'):
+        reshaped_image = tf.cast(image, tf.float32)
+        # float_image = tf.image.per_image_standardization(reshaped_image)
+        processed_image = reshaped_image
+
+    min_fraction_of_examples_in_queue = 0.4
+    min_queue_examples = int(NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN * min_fraction_of_examples_in_queue)
+
+    images, labels = generate_image_and_label_batch(processed_image, label, min_queue_examples, batch_size)
 
     sess = tf.Session()
 
