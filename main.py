@@ -32,7 +32,7 @@ class Model:
     def __init__(self, images, global_step, batch_size):
         self.trainers = []
         self.losses = []
-        self.sparcity = 0.005
+        self.sparcity = 0.05
 
         self.flat_norm_images = tf.reshape(images, [-1, img_dim], name='flatten')
 
@@ -50,7 +50,7 @@ class Model:
             self.reconstruction_loss1 = tf.nn.l2_loss(self.y1 - self.flat_norm_images, name='loss1')
             self.p1 = tf.reduce_mean(self.h1)
             self.kl_loss1 = tf.reduce_sum(self.sparcity * tf.log(self.sparcity / self.p1) + (1 - self.sparcity) * tf.log((1 - self.sparcity) / (1 - self.p1)))
-            alpha = 0
+            alpha = 1
             self.loss1 = tf.add(self.reconstruction_loss1, alpha * self.kl_loss1, name='total_loss1')
             self.train1 = tf.train.AdamOptimizer(0.002).minimize(self.loss1, global_step, self.vars1, name='train1')
             self.losses.append(self.loss1)
