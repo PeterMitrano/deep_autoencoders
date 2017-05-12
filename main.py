@@ -40,7 +40,7 @@ class Model:
             self.h1_dim = 100
             self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0.0, 0.1), name='w1')
             self.w1_trans = tf.transpose(self.w1, [1, 0])
-            self.w1_viz = tf.reshape(tf.divide(self.w1, tf.reduce_sum(tf.matmul(self.w1, self.w1_trans))), [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='w1_viz')
+            self.w1_viz = tf.reshape(self.w1, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='w1_viz')
             self.w1_viz_red, self.w1_viz_green, self.w1_viz_blue = tf.unstack(self.w1_viz, axis=3)
             self.w1_viz_red = tf.expand_dims(self.w1_viz_red, axis=3)
             self.w1_viz_green = tf.expand_dims(self.w1_viz_green, axis=3)
