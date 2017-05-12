@@ -1,3 +1,5 @@
+#!/usr/bin/python3.5
+
 import tensorflow as tf
 import sys
 from subprocess import call
@@ -38,13 +40,12 @@ def generate_image_and_label_batch(image, label, min_queue_examples, batch_size)
         capacity=min_queue_examples + 3 * batch_size,
         min_after_dequeue=min_queue_examples)
 
-    # Display the training images in the visualizer.
     tf.summary.image('images', images)
 
     return images, tf.reshape(label_batch, [batch_size])
 
 
-def inputs():
+def read_inputs():
     data_dir = 'cifar'
     train_filenames = [os.path.join(data_dir, 'data_batch_%i.bin' % i) for i in range(5)]
 
@@ -63,14 +64,11 @@ def inputs():
 
 
 def main():
-    images, labels = inputs()
+    images, labels = read_inputs()
 
     sess = tf.Session()
 
-    init = tf.global_variables_initializer()
-    summaries = tf.summary.merge_all()
-
-    tf.train.start_queue_runners()
+    tf.train.start_queue_runners(sess=sess)
 
     day_str = "{:%B_%d}".format(datetime.now())
     time_str = "{:%H:%M:%S}".format(datetime.now())
@@ -81,6 +79,13 @@ def main():
 
     writer = tf.summary.FileWriter(log_path)
 
+    global_step = tf.Variable(0, trainable=False, name='global_step')
+
+    # TODO: define model here
+
+    init = tf.global_variables_initializer()
+    summaries = tf.summary.merge_all()
+
     # Open text editor to write description of the run and commit it
     if '--temp' not in sys.argv:
         cmd = ['git', 'commit', __file__]
@@ -88,11 +93,13 @@ def main():
         call(cmd)
 
     writer.add_graph(sess.graph)
+
     sess.run(init)
 
-    global_step = tf.Variable(0, trainable=False, name='global_step')
+    feed_dict = {
+    }
 
-    sum, step = sess.run([summaries, global_step])
+    sum, step = sess.run([summaries, global_step], feed_dict)
     writer.add_summary(sum, step)
 
 
