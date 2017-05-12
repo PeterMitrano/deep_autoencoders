@@ -34,12 +34,13 @@ def read_cifar10(filename_queue):
 
 def generate_image_and_label_batch(image, label, min_queue_examples, batch_size):
     with tf.name_scope("make_batches"):
-        num_preprocess_threads = 1
-        images, label_batch = tf.train.batch(
+        num_preprocess_threads = 2
+        images, label_batch = tf.train.shuffle_batch(
             [image, label],
             batch_size=batch_size,
             num_threads=num_preprocess_threads,
-            capacity=min_queue_examples + 3 * batch_size)
+            capacity=min_queue_examples + 3 * batch_size,
+            min_after_dequeue=min_queue_examples)
 
         tf.summary.image('images', images)
 
@@ -48,9 +49,10 @@ def generate_image_and_label_batch(image, label, min_queue_examples, batch_size)
 
 def read_inputs():
     data_dir = 'cifar'
-    train_filenames = [os.path.join(data_dir, 'data_batch_%i.bin' % i) for i in range(5)]
+    train_filenames = [os.path.join(data_dir, 'data_batch_%i.bin' % i) for i in range(1, 6)]
 
     filename_queue = tf.train.string_input_producer(train_filenames)
+    print(train_filenames)
     read_input = read_cifar10(filename_queue)
 
     reshaped_image = tf.cast(read_input.image, tf.float32)
