@@ -69,16 +69,20 @@ def read_inputs():
 class Model:
     def __init__(self, images, global_step):
         flat_images = tf.reshape(images, [-1, img_dim], name='flatten')
-        self.h1_dim = 1000
-        self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0, 0.1), name='w1')
-        self.w1_trans = tf.transpose(self.w1, [1, 0])
-        self.b1 = tf.Variable(tf.constant(0.1), [self.h1_dim], name='b1')
-        self.a1 = tf.Variable(tf.constant(0.1), [img_dim], name='a1')
-        self.z1 = tf.nn.sigmoid(tf.matmul(flat_images, self.w1) + self.b1)
-        self.y1 = tf.nn.sigmoid(tf.matmul(self.z1, self.w1_trans) + self.a1)
-        self.loss1 = tf.nn.l2_loss(self.y1 - flat_images)
-        self.vars1 = [self.w1, self.b1, self.a1]
-        self.optim1 = tf.train.AdamOptimizer(0.0001).minimize(self.loss1, global_step, self.vars1)
+
+        with tf.name_scope('layer_1'):
+            self.h1_dim = 1000
+            self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0, 0.1), name='w1')
+            self.w1_trans = tf.transpose(self.w1, [1, 0])
+            self.b1 = tf.Variable(tf.constant(0.1), [self.h1_dim], name='b1')
+            self.a1 = tf.Variable(tf.constant(0.1), [img_dim], name='a1')
+            self.z1 = tf.nn.sigmoid(tf.matmul(flat_images, self.w1) + self.b1, name='z1')
+            self.y1 = tf.nn.sigmoid(tf.matmul(self.z1, self.w1_trans) + self.a1, name='y1')
+            self.loss1 = tf.nn.l2_loss(self.y1 - flat_images, name='loss1')
+            self.vars1 = [self.w1, self.b1, self.a1]
+            self.train1 = tf.train.AdamOptimizer(0.0001).minimize(self.loss1, global_step, self.vars1, name='train1')
+
+            tf.summary.scalar('loss1', self.loss1)
 
 
 def main():
@@ -114,8 +118,8 @@ def main():
 
     sess.run(init)
 
-    for i in range(100):
-        _, loss1 = sess.run([m.optim1, m.loss1])
+    for i in range(500):
+        _, loss1 = sess.run([m.train1, m.loss1])
 
         if i % 10 == 0:
             print(loss1)
