@@ -37,7 +37,7 @@ class Model:
         self.flat_norm_images = tf.reshape(images, [-1, img_dim], name='flatten')
 
         with tf.name_scope('layer_1'):
-            self.h1_dim = 200
+            self.h1_dim = 100
             self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0.0, 0.1), name='w1')
             self.w1_trans = tf.transpose(self.w1, [1, 0])
             self.b1 = tf.Variable(tf.constant(0.05, shape=[self.h1_dim]), name='b1')
@@ -50,13 +50,15 @@ class Model:
             self.reconstruction_loss1 = tf.nn.l2_loss(self.y1 - self.flat_norm_images, name='loss1')
             self.p1 = tf.reduce_mean(self.h1)
             self.kl_loss1 = tf.reduce_sum(self.sparcity * tf.log(self.sparcity / self.p1) + (1 - self.sparcity) * tf.log((1 - self.sparcity) / (1 - self.p1)))
-            self.loss1 = tf.add(self.reconstruction_loss1, self.kl_loss1, name='total_loss1')
+            alpha = 0
+            self.loss1 = tf.add(self.reconstruction_loss1, alpha * self.kl_loss1, name='total_loss1')
             self.train1 = tf.train.AdamOptimizer(0.002).minimize(self.loss1, global_step, self.vars1, name='train1')
             self.losses.append(self.loss1)
             self.trainers.append(self.train1)
 
             tf.summary.scalar('reconstruction_loss1', self.reconstruction_loss1)
             tf.summary.scalar('loss1', self.loss1)
+            tf.summary.scalar('p1', self.p1)
             tf.summary.histogram('w1', self.w1)
             tf.summary.histogram('b1', self.b1)
             tf.summary.histogram('a1', self.a1)
