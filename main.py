@@ -42,15 +42,15 @@ class Model:
             self.w1_trans = tf.transpose(self.w1, [1, 0])
             self.b1 = tf.Variable(tf.constant(0.05, shape=[self.h1_dim]), name='b1')
             self.a1 = tf.Variable(tf.constant(0.05, shape=[img_dim]), name='a1')
-            self.h1 = tf.nn.sigmoid(tf.matmul(self.flat_norm_images, self.w1) + self.b1, name='h1')
-            self.y1 = tf.nn.sigmoid(tf.matmul(self.h1, self.w1_trans) + self.a1, name='y1')
+            self.h1 = tf.nn.tanh(tf.matmul(self.flat_norm_images, self.w1) + self.b1, name='h1')
+            self.y1 = tf.nn.tanh(tf.matmul(self.h1, self.w1_trans) + self.a1, name='y1')
             self.y1_images = tf.reshape(self.y1, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='y1_images')
             self.vars1 = [self.w1, self.b1, self.a1]
 
             self.reconstruction_loss1 = tf.nn.l2_loss(self.y1 - self.flat_norm_images, name='loss1')
             self.p1 = tf.reduce_mean(self.h1)
             self.kl_loss1 = tf.reduce_sum(self.sparcity * tf.log(self.sparcity / self.p1) + (1 - self.sparcity) * tf.log((1 - self.sparcity) / (1 - self.p1)))
-            alpha = 5000
+            alpha = 0.0
             self.loss1 = tf.add(self.reconstruction_loss1, alpha * self.kl_loss1, name='total_loss1')
             self.train1 = tf.train.AdamOptimizer(0.002).minimize(self.loss1, global_step, self.vars1, name='train1')
             self.losses.append(self.loss1)
@@ -89,7 +89,7 @@ def main():
 
     with tf.name_scope('preprocess'):
         reshaped_image = tf.cast(image, tf.float32)
-        # float_image = tf.image.per_image_standardization(reshaped_image)
+        float_image = tf.image.per_image_standardization(reshaped_image)
         processed_image = reshaped_image
 
     min_fraction_of_examples_in_queue = 0.4
