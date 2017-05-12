@@ -68,7 +68,8 @@ def read_inputs():
 
 class Model:
     def __init__(self, images, global_step):
-        flat_norm_images = tf.reshape(images, [-1, img_dim], name='flatten') / 255.0
+        images = images / 255.0
+        flat_norm_images = tf.reshape(images, [-1, img_dim], name='flatten')
 
         with tf.name_scope('layer_1'):
             self.h1_dim = 1500
@@ -80,7 +81,7 @@ class Model:
             self.y1 = tf.nn.sigmoid(tf.matmul(self.z1, self.w1_trans) + self.a1, name='y1')
             self.loss1 = tf.nn.l2_loss(self.y1 - flat_norm_images, name='loss1')
             self.vars1 = [self.w1, self.b1, self.a1]
-            self.train1 = tf.train.AdamOptimizer(0.0005).minimize(self.loss1, global_step, self.vars1, name='train1')
+            self.train1 = tf.train.AdamOptimizer(0.001).minimize(self.loss1, global_step, self.vars1, name='train1')
 
             self.y1_images = tf.reshape(self.y1, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='y1_shape')
 
@@ -91,6 +92,7 @@ class Model:
             tf.summary.histogram('a1', self.a1)
             tf.summary.histogram('y1', self.y1)
             tf.summary.image('y1_images', self.y1_images)
+            tf.summary.image('images', images)
 
 
 def main():
