@@ -73,10 +73,10 @@ class Model:
 
         with tf.name_scope('layer_1'):
             self.h1_dim = 1500
-            self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0, 0.1), name='w1')
+            self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0.0, 0.1), name='w1')
             self.w1_trans = tf.transpose(self.w1, [1, 0])
-            self.b1 = tf.Variable(tf.constant(0.1), [self.h1_dim], name='b1')
-            self.a1 = tf.Variable(tf.constant(0.1), [img_dim], name='a1')
+            self.b1 = tf.Variable(tf.constant(0.05), [self.h1_dim], name='b1')
+            self.a1 = tf.Variable(tf.constant(0.05), [img_dim], name='a1')
             self.z1 = tf.nn.sigmoid(tf.matmul(flat_norm_images, self.w1) + self.b1, name='z1')
             self.y1 = tf.nn.sigmoid(tf.matmul(self.z1, self.w1_trans) + self.a1, name='y1')
             self.y1_images = tf.reshape(self.y1, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='y1_shape')
