@@ -1,0 +1,5 @@
+log_data
+cifar
+.ipynb_checkpoints
+*.pyc
+.idea
