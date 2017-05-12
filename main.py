@@ -13,36 +13,37 @@ NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 50000
 
 
 def read_cifar10(filename_queue):
-    class CifarRecord(object):
-        def __init__(self):
-            self.image = None
-            self.label = None
+    with tf.name_scope("read"):
+        class CifarRecord(object):
+            def __init__(self):
+                self.image = None
+                self.label = None
 
-    result = CifarRecord()
+        result = CifarRecord()
 
-    reader = tf.FixedLengthRecordReader(record_bytes=32 * 32 * 3 + 1, name='input_reader')
-    result.key, record_str = reader.read(filename_queue)
-    record_raw = tf.decode_raw(record_str, tf.uint8)
+        reader = tf.FixedLengthRecordReader(record_bytes=32 * 32 * 3 + 1, name='input_reader')
+        result.key, record_str = reader.read(filename_queue, name='read_op')
+        record_raw = tf.decode_raw(record_str, tf.uint8, name='decode_raw')
 
-    result.label = tf.cast(tf.slice(record_raw, [0], [1]), tf.int32)
-    image = tf.reshape(tf.slice(record_raw, [1], [32 * 32 * 3]), [3, 32, 32])
-    result.image = tf.cast(tf.transpose(image, [1, 2, 0]), tf.float32)
+        result.label = tf.cast(tf.slice(record_raw, [0], [1]), tf.int32)
+        image = tf.reshape(tf.slice(record_raw, [1], [32 * 32 * 3]), [3, 32, 32])
+        result.image = tf.cast(tf.transpose(image, [1, 2, 0]), tf.float32)
 
-    return result
+        return result
 
 
 def generate_image_and_label_batch(image, label, min_queue_examples, batch_size):
-    num_preprocess_threads = 16
-    images, label_batch = tf.train.shuffle_batch(
-        [image, label],
-        batch_size=batch_size,
-        num_threads=num_preprocess_threads,
-        capacity=min_queue_examples + 3 * batch_size,
-        min_after_dequeue=min_queue_examples)
+    with tf.name_scope("make_batches"):
+        num_preprocess_threads = 1
+        images, label_batch = tf.train.batch(
+            [image, label],
+            batch_size=batch_size,
+            num_threads=num_preprocess_threads,
+            capacity=min_queue_examples + 3 * batch_size)
 
-    tf.summary.image('images', images)
+        tf.summary.image('images', images)
 
-    return images, tf.reshape(label_batch, [batch_size])
+        return images, tf.reshape(label_batch, [batch_size])
 
 
 def read_inputs():
