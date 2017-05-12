@@ -47,7 +47,7 @@ class Model:
             self.vars1 = [self.w1, self.b1, self.a1]
 
             self.loss1 = tf.nn.l2_loss(self.y1 - self.flat_norm_images, name='loss1')
-            self.train1 = tf.train.AdamOptimizer(0.001).minimize(self.loss1, global_step, self.vars1, name='train1')
+            self.train1 = tf.train.AdamOptimizer(0.01).minimize(self.loss1, global_step, self.vars1, name='train1')
             self.losses.append(self.loss1)
             self.trainers.append(self.train1)
 
@@ -120,10 +120,10 @@ def main():
 
     sess.run(init)
 
-    layer_schedule = [1000]
+    layer_schedule = [4000]
     layer = 0
     layer_it = 0
-    for i in range(1000):
+    for i in range(4000):
         if layer_it == layer_schedule[layer]:
             layer += 1
             layer_it = 0
