@@ -39,11 +39,12 @@ class Model:
         with tf.name_scope('layer_1'):
             self.h1_dim = 100
             self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0.0, 0.1), name='w1')
+            self.w1_viz = tf.divide(self.w1, tf.reduce_sum(tf.multiply(self.w1, self.w1)))
             self.w1_trans = tf.transpose(self.w1, [1, 0])
             self.b1 = tf.Variable(tf.constant(0.05, shape=[self.h1_dim]), name='b1')
             self.a1 = tf.Variable(tf.constant(0.05, shape=[img_dim]), name='a1')
-            self.h1 = tf.nn.softplus(tf.matmul(self.flat_norm_images, self.w1) + self.b1, name='h1')
-            self.y1 = tf.nn.softplus(tf.matmul(self.h1, self.w1_trans) + self.a1, name='y1')
+            self.h1 = tf.nn.sigmoid(tf.matmul(self.flat_norm_images, self.w1) + self.b1, name='h1')
+            self.y1 = tf.nn.sigmoid(tf.matmul(self.h1, self.w1_trans) + self.a1, name='y1')
             self.y1_images = tf.reshape(self.y1, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='y1_images')
             self.vars1 = [self.w1, self.b1, self.a1]
 
@@ -65,6 +66,7 @@ class Model:
             tf.summary.histogram('h1', self.h1)
             tf.summary.histogram('y1', self.y1)
             tf.summary.image('y1_images', self.y1_images, max_outputs=10)
+            tf.summary.image('w1_viz', self.w1_viz, max_outputs=100)
 
         tf.summary.image('images', images, max_outputs=10)
         tf.summary.histogram('images', self.flat_norm_images)
