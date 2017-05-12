@@ -1,5 +1,6 @@
 #!/usr/bin/python3.5
 
+import numpy as np
 import tensorflow as tf
 import sys
 from subprocess import call
@@ -22,7 +23,7 @@ def read_cifar10(filename_queue):
 
         result = CifarRecord()
 
-        reader = tf.FixedLengthRecordReader(record_bytes= img_dim + 1, name='input_reader')
+        reader = tf.FixedLengthRecordReader(record_bytes=img_dim + 1, name='input_reader')
         result.key, record_str = reader.read(filename_queue, name='read_op')
         record_raw = tf.decode_raw(record_str, tf.uint8, name='decode_raw')
 
@@ -48,7 +49,7 @@ def generate_image_and_label_batch(image, label, min_queue_examples, batch_size)
         return images, tf.reshape(label_batch, [batch_size])
 
 
-def read_inputs():
+def read_inputs(batch_size):
     data_dir = 'cifar'
     train_filenames = [os.path.join(data_dir, 'data_batch_%i.bin' % i) for i in range(1, 6)]
 
@@ -62,30 +63,30 @@ def read_inputs():
     min_fraction_of_examples_in_queue = 0.4
     min_queue_examples = int(NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN * min_fraction_of_examples_in_queue)
 
-    batch_size = 128
     return generate_image_and_label_batch(float_image, read_input.label, min_queue_examples, batch_size)
 
 
 class Model:
-    def __init__(self, images, global_step):
+    def __init__(self, images, global_step, batch_size):
         self.trainers = []
         self.losses = []
 
-        images = images / 255.0
-        flat_norm_images = tf.reshape(images, [-1, img_dim], name='flatten')
+        self.max = tf.reduce_max(images)
+        images = images / self.max
+        self.flat_norm_images = tf.reshape(images, [-1, img_dim], name='flatten')
 
         with tf.name_scope('layer_1'):
             self.h1_dim = 100
             self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0.0, 0.1), name='w1')
             self.w1_trans = tf.transpose(self.w1, [1, 0])
-            self.b1 = tf.Variable(tf.constant(0.05), [self.h1_dim], name='b1')
-            self.a1 = tf.Variable(tf.constant(0.05), [img_dim], name='a1')
-            self.h1 = tf.nn.sigmoid(tf.matmul(flat_norm_images, self.w1) + self.b1, name='h1')
+            self.b1 = tf.Variable(tf.constant(0.05, shape=[self.h1_dim]), name='b1')
+            self.a1 = tf.Variable(tf.constant(0.05, shape=[img_dim]), name='a1')
+            self.h1 = tf.nn.sigmoid(tf.matmul(self.flat_norm_images, self.w1) + self.b1, name='h1')
             self.y1 = tf.nn.sigmoid(tf.matmul(self.h1, self.w1_trans) + self.a1, name='y1')
-
+            self.y1_images = tf.reshape(self.y1, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='y1_images')
             self.vars1 = [self.w1, self.b1, self.a1]
 
-            self.loss1 = tf.nn.l2_loss(self.y1 - flat_norm_images, name='loss1')
+            self.loss1 = tf.nn.l2_loss(self.y1 - self.flat_norm_images, name='loss1')
             self.train1 = tf.train.AdamOptimizer(0.001).minimize(self.loss1, global_step, self.vars1, name='train1')
             self.losses.append(self.loss1)
             self.trainers.append(self.train1)
@@ -94,7 +95,9 @@ class Model:
             tf.summary.histogram('w1', self.w1)
             tf.summary.histogram('b1', self.b1)
             tf.summary.histogram('a1', self.a1)
+            tf.summary.histogram('h1', self.h1)
             tf.summary.histogram('y1', self.y1)
+            tf.summary.image('y1_images', self.y1_images, max_outputs=10)
 
         # with tf.name_scope('layer_2'):
         #     self.h2_dim = 750
@@ -121,11 +124,13 @@ class Model:
         #     tf.summary.histogram('y2', self.y2)
         #     tf.summary.image('y2_images', self.y2_images)
 
-        tf.summary.image('images', images)
+        tf.summary.image('images', images, max_outputs=10)
+        tf.summary.histogram('images', self.flat_norm_images)
 
 
 def main():
-    images, labels = read_inputs()
+    batch_size = 128
+    images, labels = read_inputs(batch_size)
 
     sess = tf.Session()
 
@@ -142,7 +147,7 @@ def main():
 
     global_step = tf.Variable(0, trainable=False, name='global_step')
 
-    m = Model(images, global_step)
+    m = Model(images, global_step, batch_size)
 
     init = tf.global_variables_initializer()
     summaries = tf.summary.merge_all()
@@ -157,7 +162,7 @@ def main():
 
     sess.run(init)
 
-    layer_schedule = [1000]
+    layer_schedule = [500]
     layer = 0
     layer_it = 0
     for i in range(1000):
