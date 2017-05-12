@@ -79,11 +79,12 @@ class Model:
             self.a1 = tf.Variable(tf.constant(0.1), [img_dim], name='a1')
             self.z1 = tf.nn.sigmoid(tf.matmul(flat_norm_images, self.w1) + self.b1, name='z1')
             self.y1 = tf.nn.sigmoid(tf.matmul(self.z1, self.w1_trans) + self.a1, name='y1')
-            self.loss1 = tf.nn.l2_loss(self.y1 - flat_norm_images, name='loss1')
-            self.vars1 = [self.w1, self.b1, self.a1]
-            self.train1 = tf.train.AdamOptimizer(0.001).minimize(self.loss1, global_step, self.vars1, name='train1')
-
             self.y1_images = tf.reshape(self.y1, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='y1_shape')
+
+            self.vars1 = [self.w1, self.b1, self.a1]
+
+            self.loss1 = tf.nn.l2_loss(self.y1_images - images, name='loss1')
+            self.train1 = tf.train.AdamOptimizer(0.001).minimize(self.loss1, global_step, self.vars1, name='train1')
 
             tf.summary.scalar('loss1', self.loss1)
             tf.summary.histogram('images', flat_norm_images)
