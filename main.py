@@ -72,17 +72,20 @@ class Model:
 
         with tf.name_scope('layer_1'):
             self.h1_dim = 1000
+            self.alpha1 = 1e-3
             self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0, 0.1), name='w1')
             self.w1_trans = tf.transpose(self.w1, [1, 0])
             self.b1 = tf.Variable(tf.constant(0.1), [self.h1_dim], name='b1')
             self.a1 = tf.Variable(tf.constant(0.1), [img_dim], name='a1')
             self.z1 = tf.nn.sigmoid(tf.matmul(flat_images, self.w1) + self.b1, name='z1')
             self.y1 = tf.nn.sigmoid(tf.matmul(self.z1, self.w1_trans) + self.a1, name='y1')
-            self.loss1 = tf.nn.l2_loss(self.y1 - flat_images, name='loss1')
+            self.loss1 = tf.nn.l2_loss(self.y1 - flat_images, name='loss1') + self.alpha1 * tf.nn.l2_loss(self.w1)
             self.vars1 = [self.w1, self.b1, self.a1]
             self.train1 = tf.train.AdamOptimizer(0.0001).minimize(self.loss1, global_step, self.vars1, name='train1')
 
             tf.summary.scalar('loss1', self.loss1)
+            tf.summary.histogram('images', flat_images)
+            tf.summary.histogram('y1', self.y1)
 
 
 def main():
