@@ -68,25 +68,29 @@ def read_inputs():
 
 class Model:
     def __init__(self, images, global_step):
-        flat_norm_images = tf.reshape(images, [-1, img_dim], name='flatten') / 255
+        flat_norm_images = tf.reshape(images, [-1, img_dim], name='flatten') / 255.0
 
         with tf.name_scope('layer_1'):
             self.h1_dim = 1500
-            self.alpha1 = 1e-3
             self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0, 0.1), name='w1')
             self.w1_trans = tf.transpose(self.w1, [1, 0])
             self.b1 = tf.Variable(tf.constant(0.1), [self.h1_dim], name='b1')
             self.a1 = tf.Variable(tf.constant(0.1), [img_dim], name='a1')
             self.z1 = tf.nn.sigmoid(tf.matmul(flat_norm_images, self.w1) + self.b1, name='z1')
             self.y1 = tf.nn.sigmoid(tf.matmul(self.z1, self.w1_trans) + self.a1, name='y1')
-            self.loss1 = tf.nn.l2_loss(self.y1 - flat_norm_images, name='loss1') + self.alpha1 * tf.nn.l2_loss(self.w1)
+            self.loss1 = tf.nn.l2_loss(self.y1 - flat_norm_images, name='loss1')
             self.vars1 = [self.w1, self.b1, self.a1]
-            self.train1 = tf.train.AdamOptimizer(0.002).minimize(self.loss1, global_step, self.vars1, name='train1')
+            self.train1 = tf.train.AdamOptimizer(0.0005).minimize(self.loss1, global_step, self.vars1, name='train1')
+
+            self.y1_images = tf.reshape(self.y1, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='y1_shape')
 
             tf.summary.scalar('loss1', self.loss1)
             tf.summary.histogram('images', flat_norm_images)
             tf.summary.histogram('w1', self.w1)
+            tf.summary.histogram('b1', self.b1)
+            tf.summary.histogram('a1', self.a1)
             tf.summary.histogram('y1', self.y1)
+            tf.summary.image('y1_images', self.y1_images)
 
 
 def main():
