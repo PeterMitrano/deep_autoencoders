@@ -75,7 +75,7 @@ class Model:
         flat_norm_images = tf.reshape(images, [-1, img_dim], name='flatten')
 
         with tf.name_scope('layer_1'):
-            self.h1_dim = 1500
+            self.h1_dim = 100
             self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0.0, 0.1), name='w1')
             self.w1_trans = tf.transpose(self.w1, [1, 0])
             self.b1 = tf.Variable(tf.constant(0.05), [self.h1_dim], name='b1')
@@ -96,30 +96,30 @@ class Model:
             tf.summary.histogram('a1', self.a1)
             tf.summary.histogram('y1', self.y1)
 
-        with tf.name_scope('layer_2'):
-            self.h2_dim = 750
-            self.w2 = tf.Variable(tf.truncated_normal([self.h1_dim, self.h2_dim], 0.0, 0.1), name='w2')
-            self.w2_trans = tf.transpose(self.w2, [1, 0])
-            self.b2 = tf.Variable(tf.constant(0.05), [self.h2_dim], name='b2')
-            self.a2 = tf.Variable(tf.constant(0.05), [self.h2_dim], name='a2')
-            self.h2 = tf.nn.sigmoid(tf.matmul(self.h1, self.w2) + self.b2, name='h2')
-            self.h2_ = tf.nn.sigmoid(tf.matmul(self.h2, self.w2_trans) + self.a2, name='h2_')
-            self.y2 = tf.nn.sigmoid(tf.matmul(self.h2_, self.w1_trans) + self.a1, name='y2')
-            self.y2_images = tf.reshape(self.y2, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='y2_images')
-
-            self.vars2 = [self.w2, self.b2, self.a2]
-
-            self.loss2 = tf.nn.l2_loss(self.y2 - flat_norm_images, name='loss2')
-            self.train2 = tf.train.AdamOptimizer(0.001).minimize(self.loss2, global_step, self.vars2, name='train2')
-            self.losses.append(self.loss2)
-            self.trainers.append(self.train2)
-
-            tf.summary.scalar('loss2', self.loss2)
-            tf.summary.histogram('w2', self.w2)
-            tf.summary.histogram('b2', self.b2)
-            tf.summary.histogram('a2', self.a2)
-            tf.summary.histogram('y2', self.y2)
-            tf.summary.image('y2_images', self.y2_images)
+        # with tf.name_scope('layer_2'):
+        #     self.h2_dim = 750
+        #     self.w2 = tf.Variable(tf.truncated_normal([self.h1_dim, self.h2_dim], 0.0, 0.1), name='w2')
+        #     self.w2_trans = tf.transpose(self.w2, [1, 0])
+        #     self.b2 = tf.Variable(tf.constant(0.05), [self.h2_dim], name='b2')
+        #     self.a2 = tf.Variable(tf.constant(0.05), [self.h2_dim], name='a2')
+        #     self.h2 = tf.nn.sigmoid(tf.matmul(self.h1, self.w2) + self.b2, name='h2')
+        #     self.h2_ = tf.nn.sigmoid(tf.matmul(self.h2, self.w2_trans) + self.a2, name='h2_')
+        #     self.y2 = tf.nn.sigmoid(tf.matmul(self.h2_, self.w1_trans) + self.a1, name='y2')
+        #     self.y2_images = tf.reshape(self.y2, [-1, IMAGE_SIZE, IMAGE_SIZE, 3], name='y2_images')
+        #
+        #     self.vars2 = [self.w2, self.b2, self.a2]
+        #
+        #     self.loss2 = tf.nn.l2_loss(self.y2 - flat_norm_images, name='loss2')
+        #     self.train2 = tf.train.AdamOptimizer(0.001).minimize(self.loss2, global_step, self.vars2, name='train2')
+        #     self.losses.append(self.loss2)
+        #     self.trainers.append(self.train2)
+        #
+        #     tf.summary.scalar('loss2', self.loss2)
+        #     tf.summary.histogram('w2', self.w2)
+        #     tf.summary.histogram('b2', self.b2)
+        #     tf.summary.histogram('a2', self.a2)
+        #     tf.summary.histogram('y2', self.y2)
+        #     tf.summary.image('y2_images', self.y2_images)
 
         tf.summary.image('images', images)
 
