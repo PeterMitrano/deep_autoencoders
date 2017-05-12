@@ -8,6 +8,7 @@ import os
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = 32
+img_dim = IMAGE_SIZE * IMAGE_SIZE * 3
 NUM_CLASSES = 10
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 50000
 
@@ -21,12 +22,12 @@ def read_cifar10(filename_queue):
 
         result = CifarRecord()
 
-        reader = tf.FixedLengthRecordReader(record_bytes=32 * 32 * 3 + 1, name='input_reader')
+        reader = tf.FixedLengthRecordReader(record_bytes= img_dim + 1, name='input_reader')
         result.key, record_str = reader.read(filename_queue, name='read_op')
         record_raw = tf.decode_raw(record_str, tf.uint8, name='decode_raw')
 
         result.label = tf.cast(tf.slice(record_raw, [0], [1]), tf.int32)
-        image = tf.reshape(tf.slice(record_raw, [1], [32 * 32 * 3]), [3, 32, 32])
+        image = tf.reshape(tf.slice(record_raw, [1], [img_dim]), [3, 32, 32])
         result.image = tf.cast(tf.transpose(image, [1, 2, 0]), tf.float32)
 
         return result
@@ -65,6 +66,21 @@ def read_inputs():
     return generate_image_and_label_batch(float_image, read_input.label, min_queue_examples, batch_size)
 
 
+class Model:
+    def __init__(self, images, global_step):
+        flat_images = tf.reshape(images, [-1, img_dim], name='flatten')
+        self.h1_dim = 1000
+        self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0, 0.1), name='w1')
+        self.w1_trans = tf.transpose(self.w1, [1, 0])
+        self.b1 = tf.Variable(tf.constant(0.1), [self.h1_dim], name='b1')
+        self.a1 = tf.Variable(tf.constant(0.1), [img_dim], name='a1')
+        self.z1 = tf.nn.sigmoid(tf.matmul(flat_images, self.w1) + self.b1)
+        self.y1 = tf.nn.sigmoid(tf.matmul(self.z1, self.w1_trans) + self.a1)
+        self.loss1 = tf.nn.l2_loss(self.y1 - flat_images)
+        self.vars1 = [self.w1, self.b1, self.a1]
+        self.optim1 = tf.train.AdamOptimizer(0.0001).minimize(self.loss1, global_step, self.vars1)
+
+
 def main():
     images, labels = read_inputs()
 
@@ -83,7 +99,7 @@ def main():
 
     global_step = tf.Variable(0, trainable=False, name='global_step')
 
-    # TODO: define model here
+    m = Model(images, global_step)
 
     init = tf.global_variables_initializer()
     summaries = tf.summary.merge_all()
@@ -98,11 +114,13 @@ def main():
 
     sess.run(init)
 
-    feed_dict = {
-    }
+    for i in range(100):
+        _, loss1 = sess.run([m.optim1, m.loss1])
 
-    sum, step = sess.run([summaries, global_step], feed_dict)
-    writer.add_summary(sum, step)
+        if i % 10 == 0:
+            print(loss1)
+            sum, step = sess.run([summaries, global_step])
+            writer.add_summary(sum, step)
 
 
 if __name__ == '__main__':
