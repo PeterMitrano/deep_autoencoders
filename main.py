@@ -71,7 +71,7 @@ class Model:
         flat_images = tf.reshape(images, [-1, img_dim], name='flatten')
 
         with tf.name_scope('layer_1'):
-            self.h1_dim = 1000
+            self.h1_dim = 100
             self.alpha1 = 1e-3
             self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0, 0.1), name='w1')
             self.w1_trans = tf.transpose(self.w1, [1, 0])
