@@ -52,17 +52,16 @@ def read_inputs():
     train_filenames = [os.path.join(data_dir, 'data_batch_%i.bin' % i) for i in range(1, 6)]
 
     filename_queue = tf.train.string_input_producer(train_filenames)
-    print(train_filenames)
     read_input = read_cifar10(filename_queue)
 
-    reshaped_image = tf.cast(read_input.image, tf.float32)
-
-    float_image = tf.image.per_image_standardization(reshaped_image)
+    with tf.name_scope('preprocess'):
+        reshaped_image = tf.cast(read_input.image, tf.float32)
+        float_image = tf.image.per_image_standardization(reshaped_image)
 
     min_fraction_of_examples_in_queue = 0.4
     min_queue_examples = int(NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN * min_fraction_of_examples_in_queue)
 
-    batch_size = 256
+    batch_size = 128
     return generate_image_and_label_batch(float_image, read_input.label, min_queue_examples, batch_size)
 
 
