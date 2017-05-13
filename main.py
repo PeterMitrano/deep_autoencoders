@@ -74,21 +74,24 @@ def main():
     train_filenames = [os.path.join(data_dir, 'data_batch_%i.bin' % i) for i in range(1, 6)]
 
     filename_queue = tf.train.string_input_producer(train_filenames)
+    raw_img_dim = IMAGE_SIZE * IMAGE_SIZE * 3
 
     with tf.name_scope("read"):
-        reader = tf.FixedLengthRecordReader(record_bytes=img_dim + 1, name='input_reader')
+        reader = tf.FixedLengthRecordReader(record_bytes=raw_img_dim + 1, name='input_reader')
         _, record_str = reader.read(filename_queue, name='read_op')
         record_raw = tf.decode_raw(record_str, tf.uint8, name='decode_raw')
 
         label = tf.cast(tf.slice(record_raw, [0], [1]), tf.int32)
-        image = tf.reshape(tf.slice(record_raw, [1], [img_dim]), [N_CHANNELS, 32, 32])
+        image = tf.reshape(tf.slice(record_raw, [1], [raw_img_dim]), [3, 32, 32])
         float_image = tf.cast(tf.transpose(image, [1, 2, 0]), tf.float32)
-        image = tf.divide(float_image, 255.0, name='norm_images')
+        norm_image = tf.divide(float_image, 255.0, name='norm_images')
 
     with tf.name_scope('preprocess'):
         # float_image = tf.image.per_image_standardization(float_image)
-        gray_image = tf.reduce_sum(tf.multiply(image, [0.2126, 0.7512, 0.0722]), axis=2, name='grayscale')
+        gray_image = tf.reduce_sum(tf.multiply(norm_image, tf.constant([0.2126, 0.7512, 0.0722])), axis=2, name='grayscale')
+        gray_image = tf.expand_dims(gray_image, axis=2)
         processed_image = gray_image
+        # print(norm_image.get_shape())
 
     min_fraction_of_examples_in_queue = 0.4
     min_queue_examples = int(NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN * min_fraction_of_examples_in_queue)
