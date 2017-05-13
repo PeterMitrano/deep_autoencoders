@@ -73,8 +73,8 @@ class Model:
             self.b2 = tf.Variable(tf.constant(0.05, shape=[self.h2_dim]), name='b2')
             self.a2 = tf.Variable(tf.constant(0.05, shape=[self.h1_dim]), name='a2')
             self.h2 = tf.nn.sigmoid(tf.matmul(self.h1, self.w2) + self.b2, name='h2')
-            self.h2_ = tf.nn.sigmoid(tf.matmul(self.h2, self.w2_trans) + self.a2, name='h2_')
-            self.y2 = tf.nn.sigmoid(tf.matmul(self.h2_, self.w1_trans), name='y2')
+            self.h1_ = tf.nn.sigmoid(tf.matmul(self.h2, self.w2_trans) + self.a2, name='h2_')
+            self.y2 = tf.nn.sigmoid(tf.matmul(self.h1_, self.w1_trans), name='y2')
             self.y2_images = tf.reshape(self.y2, [-1, IMAGE_SIZE, IMAGE_SIZE, N_CHANNELS], name='y2_images')
             self.vars2 = [self.w2, self.b2, self.a2]
 
@@ -157,7 +157,7 @@ def main():
 
     sess.run(init)
 
-    layer_schedule = [4000]
+    layer_schedule = [2000, 2000]
     layer = 0
     layer_it = 0
     for i in range(4000):
@@ -167,6 +167,7 @@ def main():
 
         train_op = m.trainers[layer]
         loss_op = m.losses[layer]
+        layer_it += 1
 
         sess.run(train_op)
 
