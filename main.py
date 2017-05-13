@@ -176,7 +176,7 @@ def main():
             print(loss, loss_op)
 
         if i % 1000 == 0:
-            w1_saver.save(sess, 'w1', global_step=global_step)
+            w1_saver.save(sess, os.path.join(log_path, 'w1'), global_step=global_step)
 
 
 if __name__ == '__main__':
