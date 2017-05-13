@@ -1,6 +1,7 @@
 #!/usr/bin/python3.5
 
 import tensorflow as tf
+import numpy as np
 import sys
 from subprocess import call
 from datetime import datetime
@@ -63,7 +64,7 @@ class Model:
             # tf.summary.histogram('h1', self.h1)
             # tf.summary.histogram('y1', self.y1)
             # tf.summary.image('y1_images', self.y1_images, max_outputs=10)
-            tf.summary.image('w1_viz', self.w1_viz, max_outputs=10)
+            tf.summary.image('w1_viz', self.w1_viz, max_outputs=100)
 
         with tf.name_scope('layer_2'):
             self.h2_dim = 10
@@ -143,7 +144,6 @@ def main():
 
     m = Model(images, global_step, batch_size)
 
-    w1_saver = tf.train.Saver({'w1_viz': m.w1})
     init = tf.global_variables_initializer()
     summaries = tf.summary.merge_all()
 
@@ -176,7 +176,8 @@ def main():
             print(loss, loss_op)
 
         if i % 1000 == 0:
-            w1_saver.save(sess, os.path.join(log_path, 'w1'), global_step=global_step)
+            w1_viz = sess.run(m.w1_viz)
+            np.save(os.path.join(log_path, 'w1_viz_%i.npy' % i), w1_viz)
 
 
 if __name__ == '__main__':
