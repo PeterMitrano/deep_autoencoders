@@ -99,7 +99,7 @@ class Model:
             self.vars3 = [self.w3, self.b3]
 
             self.loss3 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.y3, labels=label_batch), name='classification_loss')
-            self.train3 = tf.train.AdamOptimizer(0.001).minimize(self.loss3)
+            self.train3 = tf.train.AdamOptimizer(0.001).minimize(self.loss3, global_step, self.vars3, name='train3')
             self.losses.append(self.loss3)
             self.trainers.append(self.train3)
 
@@ -169,10 +169,10 @@ def main():
 
     sess.run(init)
 
-    layer_schedule = [2000, 2000, 500]
+    layer_schedule = [4000, 4000, 2000]
     layer = 0
     layer_it = 0
-    for i in range(4500):
+    for i in range(10000):
         if layer_it == layer_schedule[layer]:
             layer += 1
             layer_it = 0
