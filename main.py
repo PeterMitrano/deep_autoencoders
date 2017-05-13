@@ -15,11 +15,11 @@ NUM_CLASSES = 10
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 50000
 
 
-def generate_image_and_label_batch(image, label, min_queue_examples, batch_size):
+def generate_image_and_label_batch(images, labels, min_queue_examples, batch_size):
     with tf.name_scope("make_batches"):
         num_preprocess_threads = 2
         images, label_batch = tf.train.shuffle_batch(
-            [image, label],
+            [images, labels],
             batch_size=batch_size,
             num_threads=num_preprocess_threads,
             capacity=min_queue_examples + 3 * batch_size,
@@ -31,11 +31,13 @@ def generate_image_and_label_batch(image, label, min_queue_examples, batch_size)
 
 
 class Model:
-    def __init__(self, image_batch, label_batch, global_step, batch_size):
+    def __init__(self, image_batch, label_batch, global_step):
+        self.image_batch = image_batch
+        self.label_batch = label_batch
         self.trainers = []
         self.losses = []
 
-        self.image_batch_flat = tf.reshape(image_batch, [-1, img_dim], name='flatten')
+        self.image_batch_flat = tf.reshape(self.image_batch, [-1, img_dim], name='flatten')
 
         with tf.name_scope('layer_1'):
             self.h1_dim = 500
@@ -95,7 +97,7 @@ class Model:
             self.b3 = tf.Variable(tf.constant(0.1, shape=[NUM_CLASSES]), name='b3')
             self.y3 = tf.matmul(self.h2, self.w3) + self.b3
             self.pred = tf.argmax(self.y3, axis=1)
-            self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.pred, tf.argmax(label_batch, axis=1)), dtype=tf.float32))
+            self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.pred, tf.argmax(self.label_batch, axis=1)), dtype=tf.float32))
             self.vars3 = [self.w3, self.b3]
 
             self.loss3 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.y3, labels=label_batch), name='classification_loss')
@@ -106,20 +108,16 @@ class Model:
             tf.summary.scalar('classification_loss', self.loss3)
             tf.summary.scalar('accuracy', self.accuracy)
 
-        tf.summary.image('images', image_batch, max_outputs=10)
+        tf.summary.image('images', self.image_batch, max_outputs=10)
 
 
-def main():
-    batch_size = 128
-    data_dir = 'cifar'
-    train_filenames = [os.path.join(data_dir, 'data_batch_%i.bin' % i) for i in range(1, 6)]
-
-    filename_queue = tf.train.string_input_producer(train_filenames)
+def input_queue(filenames):
+    queue = tf.train.string_input_producer(filenames)
     raw_img_dim = IMAGE_SIZE * IMAGE_SIZE * 3
 
     with tf.name_scope("read"):
         reader = tf.FixedLengthRecordReader(record_bytes=raw_img_dim + 1, name='input_reader')
-        _, record_str = reader.read(filename_queue, name='read_op')
+        _, record_str = reader.read(queue, name='read_op')
         record_raw = tf.decode_raw(record_str, tf.uint8, name='decode_raw')
 
         label = tf.cast(tf.slice(record_raw, [0], [1]), tf.int32)
@@ -134,10 +132,21 @@ def main():
         processed_image = gray_image
         # print(norm_image.get_shape())
 
+    return processed_image, label
+
+
+def main():
+    data_dir = 'cifar'
+    train_filenames = [os.path.join(data_dir, 'data_batch_%i.bin' % i) for i in range(1, 6)]
+    test_filenames = [os.path.join(data_dir, 'test_batch.bin')]
+
+    train_images, train_labels = input_queue(train_filenames)
+    test_images, test_labels = input_queue(test_filenames)
+
     min_fraction_of_examples_in_queue = 0.4
     min_queue_examples = int(NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN * min_fraction_of_examples_in_queue)
-
-    image_batch, label_batch = generate_image_and_label_batch(processed_image, label, min_queue_examples, batch_size)
+    train_image_batch, train_label_batch = generate_image_and_label_batch(train_images, train_labels, min_queue_examples, 128)
+    test_image_batch, test_label_batch = generate_image_and_label_batch(test_images, test_labels, min_queue_examples, 10000)
 
     sess = tf.Session()
 
@@ -154,7 +163,7 @@ def main():
 
     global_step = tf.Variable(0, trainable=False, name='global_step')
 
-    m = Model(image_batch, label_batch, global_step, batch_size)
+    train_m = Model(train_image_batch, train_label_batch, global_step)
 
     init = tf.global_variables_initializer()
     summaries = tf.summary.merge_all()
@@ -169,16 +178,16 @@ def main():
 
     sess.run(init)
 
-    layer_schedule = [4000, 2000, 4000]
+    layer_schedule = [10000, 10000, 10000]
     layer = 0
     layer_it = 0
-    for i in range(10000):
+    for i in range(30000):
         if layer_it == layer_schedule[layer]:
             layer += 1
             layer_it = 0
 
-        train_op = m.trainers[layer]
-        loss_op = m.losses[layer]
+        train_op = train_m.trainers[layer]
+        loss_op = train_m.losses[layer]
         layer_it += 1
 
         sess.run(train_op)
@@ -189,8 +198,15 @@ def main():
             print(loss, loss_op)
 
         if i % 1000 == 0:
-            w1_viz = sess.run(m.w1_viz)
+            w1_viz = sess.run(train_m.w1_viz)
             np.save(os.path.join(log_path, 'w1_viz_%i.npy' % i), w1_viz)
+
+    tf.assign(global_step, 0)
+    train_m.image_batch = test_image_batch
+    train_m.label_batch = test_label_batch
+    # = Model(test_image_batch, test_label_batch, global_step, 1000)
+    test_acc = sess.run([train_m.accuracy])
+    print(test_acc)
 
 
 if __name__ == '__main__':
