@@ -169,7 +169,7 @@ def main():
 
     sess.run(init)
 
-    layer_schedule = [4000, 4000, 2000]
+    layer_schedule = [4000, 2000, 4000]
     layer = 0
     layer_it = 0
     for i in range(10000):
