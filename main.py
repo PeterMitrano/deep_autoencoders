@@ -98,7 +98,7 @@ class Model:
             self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.pred, tf.argmax(label_batch, axis=1)), dtype=tf.float32))
             self.vars3 = [self.w3, self.b3]
 
-            self.loss3 = tf.nn.softmax_cross_entropy_with_logits(logits=self.y3, labels=label_batch)
+            self.loss3 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.y3, labels=label_batch), name='classification_loss')
             self.train3 = tf.train.AdamOptimizer(0.001).minimize(self.loss3)
             self.losses.append(self.loss3)
             self.trainers.append(self.train3)
