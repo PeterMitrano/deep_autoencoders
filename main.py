@@ -40,12 +40,12 @@ class Model:
             self.h1_dim = 100
             self.w1 = tf.Variable(tf.truncated_normal([img_dim, self.h1_dim], 0.0, 0.1), name='w1')
             self.w1_trans = tf.transpose(self.w1, [1, 0])
-            self.w1_viz = tf.reshape(self.w1, [-1, IMAGE_SIZE, IMAGE_SIZE, N_CHANNELS], name='w1_viz')
+            self.w1_viz = tf.reshape(self.w1_trans, [-1, IMAGE_SIZE, IMAGE_SIZE, N_CHANNELS], name='w1_viz')
             self.b1 = tf.Variable(tf.constant(0.05, shape=[self.h1_dim]), name='b1')
             self.a1 = tf.Variable(tf.constant(0.05, shape=[img_dim]), name='a1')
             self.h1 = tf.nn.sigmoid(tf.matmul(self.flat_images, self.w1) + self.b1, name='h1')
             self.y1 = tf.nn.sigmoid(tf.matmul(self.h1, self.w1_trans) + self.a1, name='y1')
-            #TODO: these sizes are wrong!
+            #TODO: these sizes are wrong?
             self.y1_images = tf.reshape(self.y1, [-1, IMAGE_SIZE, IMAGE_SIZE, N_CHANNELS], name='y1_images')
             self.vars1 = [self.w1, self.b1, self.a1]
 
@@ -143,6 +143,7 @@ def main():
 
     m = Model(images, global_step, batch_size)
 
+    w1_saver = tf.train.Saver({'w1_viz': m.w1})
     init = tf.global_variables_initializer()
     summaries = tf.summary.merge_all()
 
@@ -173,6 +174,9 @@ def main():
             loss, sum, step = sess.run([loss_op, summaries, global_step])
             writer.add_summary(sum, step)
             print(loss, loss_op)
+
+        if i % 1000 == 0:
+            w1_saver.save(sess, 'w1', global_step=global_step)
 
 
 if __name__ == '__main__':
